@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -16,6 +18,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Mapbox token from local.properties (never commit the real key)
+        val localProperties = Properties()
+        rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { localProperties.load(it) }
+        val mapboxToken = (localProperties.getProperty("MAPBOX_ACCESS_TOKEN") ?: "").trim()
+        buildConfigField("String", "MAPBOX_ACCESS_TOKEN", "\"$mapboxToken\"")
     }
 
     buildTypes {
@@ -36,6 +44,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

@@ -36,7 +36,7 @@ private const val FOG_LAYER_ID = "fog-layer"
 
 /**
  * Main map screen: dark base map with a full-coverage fog layer on top.
- * Replace YOUR_MAPBOX_ACCESS_TOKEN in res/values/mapbox_access_token.xml with your key.
+ * Mapbox token is set from local.properties (see local.properties.example).
  */
 @OptIn(MapboxExperimental::class)
 @Composable
