@@ -13,6 +13,9 @@ import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.maps.extension.style.layers.addLayer
 import com.mapbox.maps.extension.style.layers.generated.fillLayer
+import com.mapbox.maps.extension.style.layers.properties.generated.ProjectionName
+import com.mapbox.maps.extension.style.projection.generated.Projection
+import com.mapbox.maps.extension.style.projection.generated.setProjection
 import com.mapbox.maps.extension.style.sources.addSource
 import com.mapbox.maps.extension.style.sources.generated.geoJsonSource
 
@@ -47,7 +50,7 @@ fun FogMapScreen(
         setCameraOptions(
             cameraOptions {
                 center(Point.fromLngLat(-98.0, 39.5))
-                zoom(2.0)
+                zoom(4.0)  // Regional view (e.g. US), not full world
                 pitch(0.0)
                 bearing(0.0)
             }
@@ -60,6 +63,8 @@ fun FogMapScreen(
     ) {
         MapEffect(key1 = Unit) { mapView ->
             mapView.mapboxMap.getStyle { style ->
+                // 2D flat map (Mercator), not globe
+                style.setProjection(Projection(ProjectionName.MERCATOR))
                 // Dark base map (Mapbox Standard night preset)
                 style.setStyleImportConfigProperty(
                     "basemap",
