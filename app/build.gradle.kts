@@ -40,6 +40,9 @@ android {
 }
 
 dependencies {
+    // Mapbox Maps SDK
+    implementation("com.mapbox.maps:android:11.18.2")
+    implementation("com.mapbox.extension:maps-compose:11.18.2")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
