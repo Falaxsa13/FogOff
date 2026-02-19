@@ -1,0 +1,49 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+release/
+
+# Gradle
+.gradle/
+build/
+
+# Local configuration (sdk path, etc.)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Android Profiler
+*.hprof
+
+# External native build
+.externalNativeBuild/
+.cxx/
+
+# Keystore files (uncomment if you don't want to commit signing config)
+# *.jks
+# *.keystore
+
+# macOS
+.DS_Store
+
+# Kotlin
+*.kotlin_module
+
+# Logs
+*.log
