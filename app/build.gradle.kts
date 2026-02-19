@@ -53,6 +53,14 @@ dependencies {
     implementation("com.mapbox.maps:android:11.18.2")
     implementation("com.mapbox.extension:maps-compose:11.18.2")
 
+    // Uber H3 (hexagonal geospatial index)
+    implementation("com.uber:h3:4.0.0")
+
+    // Location & ViewModel
+    implementation("com.google.android.gms:play-services-location:21.0.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
