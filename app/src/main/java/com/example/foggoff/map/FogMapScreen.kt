@@ -120,7 +120,7 @@ fun FogMapScreen(
         })
     }
 
-    val bottomControlPadding = if (hasPermission) 32.dp else 140.dp
+    val bottomControlPadding = if (hasPermission) 88.dp else 140.dp
 
     Box(modifier = modifier.fillMaxSize()) {
         FogMap(
@@ -186,7 +186,7 @@ private fun FogMap(
             val ids = unlockedH3Ids
             mapView.mapboxMap.getStyle { style ->
                 style.setProjection(Projection(ProjectionName.MERCATOR))
-                style.setStyleImportConfigProperty("basemap", "lightPreset", Value("night"))
+                style.setStyleImportConfigProperty("basemap", "lightPreset", Value("day"))
 
                 val fogGeoJson = buildFogGeoJson(ids)
                 if (style.styleSourceExists(FOG_SOURCE_ID)) {
@@ -195,8 +195,8 @@ private fun FogMap(
                     style.addSource(geoJsonSource(id = FOG_SOURCE_ID) { data(fogGeoJson) })
                     style.addLayer(
                         fillLayer(layerId = FOG_LAYER_ID, sourceId = FOG_SOURCE_ID) {
-                            fillColor(android.graphics.Color.parseColor("#0a0a0a"))
-                            fillOpacity(0.92)
+                            fillColor(android.graphics.Color.parseColor("#E8ECF0"))
+                            fillOpacity(0.88)
                         }
                     )
                 }
@@ -215,7 +215,7 @@ private fun FogMap(
                     style.addLayer(
                         circleLayer(layerId = PLAYER_LAYER_ID, sourceId = PLAYER_SOURCE_ID) {
                             circleRadius(8.0)
-                            circleColor(android.graphics.Color.parseColor("#2196F3"))
+                            circleColor(android.graphics.Color.parseColor("#1976D2"))
                             circleStrokeWidth(2.0)
                             circleStrokeColor(android.graphics.Color.parseColor("#FFFFFF"))
                         }

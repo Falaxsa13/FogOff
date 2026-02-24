@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import com.example.foggoff.map.FogMapScreen
+import com.example.foggoff.ui.MainScreen
 import com.example.foggoff.ui.theme.FoggoffTheme
 
 class MainActivity : ComponentActivity() {
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FoggoffTheme {
-                FogMapScreen(modifier = Modifier.fillMaxSize())
+                MainScreen(modifier = Modifier.fillMaxSize())
             }
         }
     }
