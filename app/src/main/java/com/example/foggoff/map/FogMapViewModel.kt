@@ -3,6 +3,7 @@ package com.example.foggoff.map
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.foggoff.data.UnlockedHexRepository
 import com.example.foggoff.h3.latLngToH3Index
 import com.example.foggoff.location.LocationTracker
 import com.mapbox.geojson.Point
@@ -19,6 +20,7 @@ private val DEFAULT_START = Point.fromLngLat(-98.0, 39.5)
 class FogMapViewModel(application: Application) : AndroidViewModel(application) {
 
     private val locationTracker = LocationTracker(application)
+    private val hexRepository = UnlockedHexRepository()
 
     private val _unlockedH3Ids = MutableStateFlow(setOf<String>())
     val unlockedH3Ids: StateFlow<Set<String>> = _unlockedH3Ids.asStateFlow()
@@ -30,13 +32,23 @@ class FogMapViewModel(application: Application) : AndroidViewModel(application) 
     val currentPosition: StateFlow<Point?> = _currentPosition.asStateFlow()
 
     init {
-        // Unlock the H3 cell at whatever position we're at, whenever it changes.
+        // Load persisted hexes from Firestore (merge with any already in memory).
+        viewModelScope.launch {
+            val loaded = hexRepository.loadUnlockedH3Ids()
+            _unlockedH3Ids.update { it + loaded }
+        }
+        // Unlock the H3 cell at whatever position we're at, whenever it changes; persist to Firestore.
         viewModelScope.launch {
             _currentPosition.filterNotNull().collect { point ->
                 val index = latLngToH3Index(point.latitude(), point.longitude()) ?: return@collect
+                var added = false
                 _unlockedH3Ids.update { current ->
-                    if (index in current) current else current + index
+                    if (index in current) current else {
+                        added = true
+                        current + index
+                    }
                 }
+                if (added) viewModelScope.launch { hexRepository.addUnlockedH3Ids(setOf(index)) }
             }
         }
     }

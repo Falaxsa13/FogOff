@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -11,7 +12,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.foggoff"
+        applicationId = "com.fogoff.fogoff"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
@@ -55,6 +56,13 @@ dependencies {
 
     // Uber H3 (hexagonal geospatial index)
     implementation("com.uber:h3:4.0.0")
+
+    // Firebase (persist unlocked hexes)
+    implementation(platform("com.google.firebase:firebase-bom:34.9.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-firestore-ktx:25.1.1")
+    implementation("com.google.firebase:firebase-auth-ktx:23.1.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     // Location & ViewModel
     implementation("com.google.android.gms:play-services-location:21.0.1")
