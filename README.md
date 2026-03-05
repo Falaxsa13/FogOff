@@ -35,4 +35,11 @@ Actively evolving.
 
 The map is still mostly fog.
 
+---
+
+## Setup
+
+- **Mapbox:** Add `MAPBOX_ACCESS_TOKEN` to `local.properties` (see `local.properties.example`).
+- **Firebase (optional):** Add `google-services.json` to `app/`. In Firebase Console enable **Google** sign-in (Authentication → Sign-in method). Create a Firestore database and set rules so authenticated users can read/write their own `users/{userId}` document. Progress (unlocked hexes) is stored per signed-in user.
+
 

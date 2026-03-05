@@ -10,7 +10,7 @@ private const val FIELD_UNLOCKED_H3_IDS = "unlockedH3Ids"
 
 /**
  * Persists and loads unlocked H3 hex IDs in Firestore.
- * Uses anonymous auth so each device has a stable user document.
+ * Requires the user to be signed in (e.g. via Google Sign-In).
  */
 class UnlockedHexRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -45,14 +45,5 @@ class UnlockedHexRepository(
         }
     }
 
-    private suspend fun ensureSignedIn(): String? {
-        val current = auth.currentUser
-        if (current != null) return current.uid
-        return try {
-            val result = auth.signInAnonymously().await()
-            result.user?.uid
-        } catch (e: Exception) {
-            null
-        }
-    }
+    private fun ensureSignedIn(): String? = auth.currentUser?.uid
 }

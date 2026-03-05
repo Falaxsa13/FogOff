@@ -1,9 +1,20 @@
 package com.example.foggoff.ui
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -11,11 +22,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.automirrored.filled.List
+import com.example.foggoff.R
 import com.example.foggoff.feed.FeedScreen
 import com.example.foggoff.map.FogMapScreen
 import com.example.foggoff.profile.ProfileScreen
@@ -27,16 +37,40 @@ private val Tabs = listOf(
 )
 
 @Composable
-fun MainScreen(modifier: Modifier = Modifier) {
+fun MainScreen(
+    onSignOut: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        when (selectedIndex) {
-            0 -> FogMapScreen(modifier = Modifier.fillMaxSize())
-            1 -> FeedScreen(modifier = Modifier.fillMaxSize())
-            else -> ProfileScreen(modifier = Modifier.fillMaxSize())
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_fogoff_logo),
+                contentDescription = "Fog Off",
+                modifier = Modifier.size(36.dp),
+                contentScale = ContentScale.Fit,
+            )
+            Text(
+                text = "Fog Off",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 12.dp),
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
-        LiquidGlassNavBar(
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (selectedIndex) {
+                0 -> FogMapScreen(modifier = Modifier.fillMaxSize())
+                1 -> FeedScreen(modifier = Modifier.fillMaxSize())
+                else -> ProfileScreen(onSignOut = onSignOut, modifier = Modifier.fillMaxSize())
+            }
+            LiquidGlassNavBar(
             selectedIndex = selectedIndex,
             tabs = Tabs,
             onTabSelected = { selectedIndex = it },
@@ -45,5 +79,6 @@ fun MainScreen(modifier: Modifier = Modifier) {
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 24.dp),
         )
+        }
     }
 }
