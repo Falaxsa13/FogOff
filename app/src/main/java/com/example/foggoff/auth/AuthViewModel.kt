@@ -8,6 +8,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,6 +60,19 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun signInWithEmail(email: String, password: String): Result<Unit> {
         return try {
             auth.signInWithEmailAndPassword(email.trim(), password).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateDisplayName(newName: String): Result<Unit> {
+        val user = auth.currentUser ?: return Result.failure(Exception("Not signed in"))
+        val trimmed = newName.trim()
+        if (trimmed.isBlank()) return Result.failure(Exception("Name cannot be empty"))
+        return try {
+            val updates = UserProfileChangeRequest.Builder().setDisplayName(trimmed).build()
+            user.updateProfile(updates).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

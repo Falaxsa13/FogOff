@@ -27,7 +27,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,15 +38,31 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.foggoff.auth.AuthViewModel
 
 @Composable
 fun ProfileScreen(
     onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ProfileViewModel = viewModel(),
+    authViewModel: AuthViewModel = viewModel(),
 ) {
     val hexCount by viewModel.hexCount.collectAsStateWithLifecycle()
+    val user by authViewModel.currentUser.collectAsStateWithLifecycle()
+    var showSettings by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+
+    val displayName = user?.displayName?.takeIf { it.isNotBlank() } ?: "Explorer"
+    val avatarLetter = displayName.firstOrNull()?.uppercaseChar() ?: "E"
+
+    if (showSettings) {
+        SettingsScreen(
+            authViewModel = authViewModel,
+            onBack = { showSettings = false },
+            modifier = modifier,
+        )
+        return
+    }
 
     Column(
         modifier = modifier
@@ -67,7 +85,7 @@ fun ProfileScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "E",
+                    text = avatarLetter.toString(),
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -75,7 +93,7 @@ fun ProfileScreen(
             }
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Explorer",
+                text = displayName,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -130,7 +148,7 @@ fun ProfileScreen(
                 ProfileRow(
                     icon = Icons.Outlined.Settings,
                     label = "Settings",
-                    onClick = { /* TODO */ },
+                    onClick = { showSettings = true },
                 )
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
