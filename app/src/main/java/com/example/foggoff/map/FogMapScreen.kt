@@ -46,12 +46,17 @@ import com.mapbox.maps.extension.compose.MapEffect
 import com.mapbox.maps.extension.compose.animation.viewport.MapViewportState
 import com.mapbox.maps.extension.compose.animation.viewport.rememberMapViewportState
 import com.mapbox.geojson.Point
-import com.mapbox.maps.extension.style.layers.addLayer
 import com.mapbox.maps.extension.style.layers.generated.circleLayer
 import com.mapbox.maps.extension.style.layers.generated.fillLayer
-import com.mapbox.maps.extension.style.layers.properties.generated.ProjectionName
-import com.mapbox.maps.extension.style.projection.generated.Projection
-import com.mapbox.maps.extension.style.projection.generated.setProjection
+import com.mapbox.maps.extension.compose.style.DoubleValue
+import com.mapbox.maps.extension.compose.style.LongValue
+import com.mapbox.maps.extension.compose.style.StringValue
+import com.mapbox.maps.extension.compose.style.standard.LightPresetValue
+import com.mapbox.maps.extension.compose.style.standard.MapboxStandardStyle
+import com.mapbox.maps.extension.compose.style.standard.rememberStandardStyleState
+import com.mapbox.maps.extension.compose.style.sources.generated.rememberRasterDemSourceState
+import com.mapbox.maps.extension.compose.style.terrain.generated.rememberTerrainState
+import com.mapbox.maps.extension.style.layers.addLayer
 import com.mapbox.maps.extension.style.sources.addSource
 import com.mapbox.maps.extension.style.sources.generated.geoJsonSource
 
@@ -63,6 +68,9 @@ private const val DEFAULT_LNG = -98.0
 private const val DEFAULT_LAT = 39.5
 private const val STREET_ZOOM = 15.0
 private const val OVERVIEW_ZOOM = 4.0
+private const val DEFAULT_PITCH = 45.0
+private const val TERRAIN_TILE_SIZE = 514L
+private const val TERRAIN_SOURCE_URL = "mapbox://mapbox.mapbox-terrain-dem-v1"
 
 // ── Root screen ──────────────────────────────────────────────────────────────
 
@@ -106,7 +114,7 @@ fun FogMapScreen(
         setCameraOptions(cameraOptions {
             center(mapCenter)
             zoom(zoomLevel)
-            pitch(0.0)
+            pitch(DEFAULT_PITCH)
             bearing(0.0)
         })
     }
@@ -115,7 +123,7 @@ fun FogMapScreen(
         viewportState.setCameraOptions(cameraOptions {
             center(mapCenter)
             zoom(zoomLevel)
-            pitch(0.0)
+            pitch(DEFAULT_PITCH)
             bearing(0.0)
         })
     }
@@ -177,15 +185,31 @@ private fun FogMap(
     unlockedH3Ids: Set<String>,
     currentPosition: Point?,
 ) {
+    val rasterDemSourceState = rememberRasterDemSourceState {
+        url = StringValue(TERRAIN_SOURCE_URL)
+        tileSize = LongValue(TERRAIN_TILE_SIZE)
+    }
+    val terrainState = rememberTerrainState(rasterDemSourceState) {
+        exaggeration = DoubleValue(1.0)
+    }
+    val standardStyleState = rememberStandardStyleState {
+        configurationsState.apply {
+            lightPreset = LightPresetValue.DAY
+        }
+    }
+    standardStyleState.terrainState = terrainState
+
     MapboxMap(
         modifier = modifier,
         mapViewportState = viewportState,
+        style = {
+            MapboxStandardStyle(standardStyleState = standardStyleState)
+        },
     ) {
         // Fog layer — created once, then source data updated in place to keep layer order stable.
         MapEffect(key1 = unlockedH3Ids.toSortedSet().joinToString()) { mapView ->
             val ids = unlockedH3Ids
             mapView.mapboxMap.getStyle { style ->
-                style.setProjection(Projection(ProjectionName.MERCATOR))
                 style.setStyleImportConfigProperty("basemap", "lightPreset", Value("day"))
 
                 val fogGeoJson = buildFogGeoJson(ids)
