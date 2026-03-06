@@ -65,20 +65,26 @@ fun MainScreen(
             )
         }
         Box(modifier = Modifier.fillMaxSize()) {
-            when (selectedIndex) {
-                0 -> FogMapScreen(modifier = Modifier.fillMaxSize())
-                1 -> FeedScreen(modifier = Modifier.fillMaxSize())
-                else -> ProfileScreen(onSignOut = onSignOut, modifier = Modifier.fillMaxSize())
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 100.dp) // Pushes content up so it's not hidden
+            ) {
+                when (selectedIndex) {
+                    0 -> FogMapScreen(modifier = Modifier.fillMaxSize())
+                    1 -> FeedScreen(modifier = Modifier.fillMaxSize())
+                    else -> ProfileScreen(onSignOut = onSignOut, modifier = Modifier.fillMaxSize())
+                }
             }
             LiquidGlassNavBar(
-            selectedIndex = selectedIndex,
-            tabs = Tabs,
-            onTabSelected = { selectedIndex = it },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 24.dp),
-        )
+                selectedIndex = selectedIndex,
+                tabs = Tabs,
+                onTabSelected = { selectedIndex = it },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
+            )
         }
     }
 }
