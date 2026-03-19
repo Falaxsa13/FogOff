@@ -1,11 +1,14 @@
 package com.example.foggoff.data
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.AggregateSource
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 
 private const val LEADERBOARD_COLLECTION_USERS = "users"
 private const val LEADERBOARD_FIELD_UNLOCKED_H3_IDS = "unlockedH3Ids"
+private const val LEADERBOARD_FIELD_UNLOCKED_HEX_COUNT = "unlockedHexCount"
 private const val LEADERBOARD_FIELD_DISPLAY_NAME = "displayName"
 
 data class LeaderboardEntry(
@@ -31,11 +34,16 @@ class LeaderboardRepository(
         val fallbackCurrentName = currentAuthName.ifBlank { "You" }
 
         return try {
-            val snapshot = firestore.collection(LEADERBOARD_COLLECTION_USERS).get().await()
-            val entries = snapshot.documents.map { doc ->
-                val unlockedIds = (doc.get(LEADERBOARD_FIELD_UNLOCKED_H3_IDS) as? List<*>)
-                    ?.filterIsInstance<String>()
-                    .orEmpty()
+            val topSnapshot = firestore.collection(LEADERBOARD_COLLECTION_USERS)
+                .orderBy(LEADERBOARD_FIELD_UNLOCKED_HEX_COUNT, Query.Direction.DESCENDING)
+                .limit(20)
+                .get()
+                .await()
+
+            val topEntries = topSnapshot.documents.map { doc ->
+                val unlockedHexes = doc.getLong(LEADERBOARD_FIELD_UNLOCKED_HEX_COUNT)?.toInt()
+                    ?: (doc.get(LEADERBOARD_FIELD_UNLOCKED_H3_IDS) as? List<*>)?.size
+                    ?: 0
                 val displayName = doc.getString(LEADERBOARD_FIELD_DISPLAY_NAME)
                     ?.trim()
                     .orEmpty()
@@ -43,32 +51,42 @@ class LeaderboardRepository(
                 LeaderboardEntry(
                     uid = doc.id,
                     displayName = displayName,
-                    unlockedHexes = unlockedIds.size,
-                )
-            }.toMutableList()
-
-            if (currentUid != null && entries.none { it.uid == currentUid }) {
-                entries += LeaderboardEntry(
-                    uid = currentUid,
-                    displayName = fallbackCurrentName,
-                    unlockedHexes = 0,
+                    unlockedHexes = unlockedHexes,
                 )
             }
 
-            val ranked = entries
-                .sortedWith(
-                    compareByDescending<LeaderboardEntry> { it.unlockedHexes }
-                        .thenBy { it.displayName.lowercase() }
-                        .thenBy { it.uid }
+            var currentEntry: LeaderboardEntry? = null
+            var currentRank: Int? = null
+            if (currentUid != null) {
+                val userDoc = firestore.collection(LEADERBOARD_COLLECTION_USERS)
+                    .document(currentUid)
+                    .get()
+                    .await()
+                val currentHexCount = userDoc.getLong(LEADERBOARD_FIELD_UNLOCKED_HEX_COUNT)?.toInt()
+                    ?: (userDoc.get(LEADERBOARD_FIELD_UNLOCKED_H3_IDS) as? List<*>)?.size
+                    ?: 0
+                val currentDisplayName = userDoc.getString(LEADERBOARD_FIELD_DISPLAY_NAME)
+                    ?.trim()
+                    .orEmpty()
+                    .ifBlank { fallbackCurrentName }
+
+                currentEntry = LeaderboardEntry(
+                    uid = currentUid,
+                    displayName = currentDisplayName,
+                    unlockedHexes = currentHexCount,
                 )
 
-            val currentRank = if (currentUid == null) null else ranked.indexOfFirst { it.uid == currentUid }
-                .takeIf { it >= 0 }
-                ?.plus(1)
-            val currentEntry = if (currentUid == null) null else ranked.firstOrNull { it.uid == currentUid }
+                val higherCount = firestore.collection(LEADERBOARD_COLLECTION_USERS)
+                    .whereGreaterThan(LEADERBOARD_FIELD_UNLOCKED_HEX_COUNT, currentHexCount)
+                    .count()
+                    .get(AggregateSource.SERVER)
+                    .await()
+                    .count
+                currentRank = higherCount.toInt() + 1
+            }
 
             LeaderboardResult(
-                top20 = ranked.take(20),
+                top20 = topEntries,
                 currentUserRank = currentRank,
                 currentUserEntry = currentEntry,
             )

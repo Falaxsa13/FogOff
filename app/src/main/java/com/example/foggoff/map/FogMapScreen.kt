@@ -198,6 +198,8 @@ private fun FogMap(
         }
     }
     standardStyleState.terrainState = terrainState
+    val fogGeoJson = remember(unlockedH3Ids) { buildFogGeoJson(unlockedH3Ids) }
+    val fogChangeToken = remember(unlockedH3Ids) { unlockedH3Ids.hashCode() * 31 + unlockedH3Ids.size }
 
     MapboxMap(
         modifier = modifier,
@@ -207,12 +209,8 @@ private fun FogMap(
         },
     ) {
         // Fog layer — created once, then source data updated in place to keep layer order stable.
-        MapEffect(key1 = unlockedH3Ids.toSortedSet().joinToString()) { mapView ->
-            val ids = unlockedH3Ids
+        MapEffect(key1 = fogChangeToken) { mapView ->
             mapView.mapboxMap.getStyle { style ->
-                style.setStyleImportConfigProperty("basemap", "lightPreset", Value("day"))
-
-                val fogGeoJson = buildFogGeoJson(ids)
                 if (style.styleSourceExists(FOG_SOURCE_ID)) {
                     style.setStyleSourceProperty(FOG_SOURCE_ID, "data", Value(fogGeoJson))
                 } else {

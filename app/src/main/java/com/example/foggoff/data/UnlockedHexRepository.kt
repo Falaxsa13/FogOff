@@ -7,6 +7,7 @@ import kotlinx.coroutines.tasks.await
 
 private const val COLLECTION_USERS = "users"
 private const val FIELD_UNLOCKED_H3_IDS = "unlockedH3Ids"
+private const val FIELD_UNLOCKED_HEX_COUNT = "unlockedHexCount"
 private const val FIELD_DISPLAY_NAME = "displayName"
 
 /**
@@ -23,7 +24,16 @@ class UnlockedHexRepository(
             val uid = ensureSignedIn() ?: return emptySet()
             val doc = firestore.collection(COLLECTION_USERS).document(uid).get().await()
             val list = doc.get(FIELD_UNLOCKED_H3_IDS) as? List<*> ?: return emptySet()
-            list.filterIsInstance<String>().toSet()
+            val ids = list.filterIsInstance<String>().toSet()
+            // Best-effort migration for leaderboard performance.
+            try {
+                firestore.collection(COLLECTION_USERS).document(uid)
+                    .update(FIELD_UNLOCKED_HEX_COUNT, ids.size)
+                    .await()
+            } catch (_: Exception) {
+                // Ignore migration failures; caller still gets loaded ids.
+            }
+            ids
         } catch (e: Exception) {
             emptySet()
         }
@@ -37,9 +47,15 @@ class UnlockedHexRepository(
             val snapshot = ref.get().await()
             val list = ids.toList()
             val displayName = auth.currentUser?.displayName?.trim().orEmpty()
+            val existingIds = (snapshot.get(FIELD_UNLOCKED_H3_IDS) as? List<*>)
+                ?.filterIsInstance<String>()
+                ?.toSet()
+                .orEmpty()
+            val newTotalCount = (existingIds + ids).size
             if (!snapshot.exists()) {
                 val payload = mutableMapOf<String, Any>(
-                    FIELD_UNLOCKED_H3_IDS to list
+                    FIELD_UNLOCKED_H3_IDS to list,
+                    FIELD_UNLOCKED_HEX_COUNT to list.size,
                 )
                 if (displayName.isNotBlank()) {
                     payload[FIELD_DISPLAY_NAME] = displayName
@@ -50,11 +66,18 @@ class UnlockedHexRepository(
                     ref.update(
                         FIELD_UNLOCKED_H3_IDS,
                         FieldValue.arrayUnion(*list.toTypedArray()),
+                        FIELD_UNLOCKED_HEX_COUNT,
+                        newTotalCount,
                         FIELD_DISPLAY_NAME,
                         displayName,
                     ).await()
                 } else {
-                    ref.update(FIELD_UNLOCKED_H3_IDS, FieldValue.arrayUnion(*list.toTypedArray())).await()
+                    ref.update(
+                        FIELD_UNLOCKED_H3_IDS,
+                        FieldValue.arrayUnion(*list.toTypedArray()),
+                        FIELD_UNLOCKED_HEX_COUNT,
+                        newTotalCount,
+                    ).await()
                 }
             }
         } catch (e: Exception) {
