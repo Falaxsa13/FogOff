@@ -36,6 +36,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -72,6 +74,7 @@ fun ProfileScreen(
 ) {
     val hexCount by viewModel.hexCount.collectAsStateWithLifecycle()
     val countries by viewModel.unlockedCountries.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.userRefreshing.collectAsStateWithLifecycle()
     val countryKmByCode by viewModel.unlockedCountryKm.collectAsStateWithLifecycle()
     val user by authViewModel.currentUser.collectAsStateWithLifecycle()
     var showSettings by remember { mutableStateOf(false) }
@@ -98,18 +101,27 @@ fun ProfileScreen(
         CountriesScreen(
             countries = countries,
             countryKmByCode = countryKmByCode,
+            refreshing = isRefreshing,
+            onRefresh = { viewModel.refresh() },
             onBack = { showCountries = false },
             modifier = modifier,
         )
         return
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
+
+    SwipeRefresh(
+        state = swipeRefreshState,
+        onRefresh = { viewModel.refresh() },
+        modifier = modifier.fillMaxSize(),
     ) {
-        // ── Hero section ────────────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            // ── Hero section ────────────────────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -308,6 +320,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+        }
     }
 }
 
@@ -449,98 +462,108 @@ private fun MenuRow(
 private fun CountriesScreen(
     countries: List<String>,
     countryKmByCode: Map<String, Double>,
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 18.dp),
+    val swipeState = rememberSwipeRefreshState(refreshing)
+
+    SwipeRefresh(
+        state = swipeState,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize(),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 18.dp),
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                )
-            }
-            Text(
-                text = "Countries",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
-            // Keep layout balanced with an invisible icon slot.
-            Box(modifier = Modifier.size(48.dp))
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        GlassCard {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                    )
+                }
                 Text(
-                    text = "Visited",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = "Countries",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                // Keep layout balanced with an invisible icon slot.
+                Box(modifier = Modifier.size(48.dp))
+            }
 
-                if (countries.isEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            GlassCard {
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Unlock a few hexes to start collecting countries.",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "Visited",
+                        style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                } else {
-                    Text(
-                        text = "${countries.distinct().size} countries unlocked",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    countries.distinct().sorted().forEach { countryRaw ->
-                        val iso2 = inferIso2(countryRaw)
-                        val km = iso2?.let { countryKmByCode[it] } ?: 0.0
-                        val displayName = iso2?.let { code ->
-                            Locale("", code).displayCountry.takeIf { it.isNotBlank() } ?: countryRaw
-                        } ?: countryRaw
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(Color.White.copy(alpha = 0.65f))
-                                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                    if (countries.isEmpty()) {
+                        Text(
+                            text = "Unlock a few hexes to start collecting countries.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Text(
+                            text = "${countries.distinct().size} countries unlocked",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        countries.distinct().sorted().forEach { countryRaw ->
+                            val iso2 = inferIso2(countryRaw)
+                            val km = iso2?.let { countryKmByCode[it] } ?: 0.0
+                            val displayName = iso2?.let { code ->
+                                Locale("", code).displayCountry.takeIf { it.isNotBlank() } ?: countryRaw
+                            } ?: countryRaw
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(Color.White.copy(alpha = 0.65f))
+                                    .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
                             ) {
-                                Text(
-                                    text = displayName,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                 ) {
                                     Text(
-                                        text = "${formatKm(km)}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
+                                        text = displayName,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                     )
-                                    if (iso2 != null) {
-                                        CountryFlag(iso2 = iso2)
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = "${formatKm(km)}",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        if (iso2 != null) {
+                                            CountryFlag(iso2 = iso2)
+                                        }
                                     }
                                 }
                             }

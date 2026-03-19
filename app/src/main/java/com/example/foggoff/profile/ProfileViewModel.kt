@@ -13,6 +13,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     private val repository = UnlockedHexRepository()
 
+    private val _loading = MutableStateFlow(true)
+    val loading: StateFlow<Boolean> = _loading.asStateFlow()
+
+    // SwipeRefresh indicator should only be active when the user pulls to refresh.
+    private val _userRefreshing = MutableStateFlow(false)
+    val userRefreshing: StateFlow<Boolean> = _userRefreshing.asStateFlow()
+
     private val _hexCount = MutableStateFlow(0)
     val hexCount: StateFlow<Int> = _hexCount.asStateFlow()
 
@@ -24,19 +31,29 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         viewModelScope.launch {
-            val ids = repository.loadUnlockedH3Ids()
-            _hexCount.value = ids.size
-            _unlockedCountries.value = repository.loadUnlockedCountryCodes()
-            _unlockedCountryKm.value = repository.loadUnlockedCountryKmByCode()
+            _loading.value = true
+            try {
+                val ids = repository.loadUnlockedH3Ids()
+                _hexCount.value = ids.size
+                _unlockedCountries.value = repository.loadUnlockedCountryCodes()
+                _unlockedCountryKm.value = repository.loadUnlockedCountryKmByCode()
+            } finally {
+                _loading.value = false
+            }
         }
     }
 
     fun refresh() {
         viewModelScope.launch {
-            val ids = repository.loadUnlockedH3Ids()
-            _hexCount.value = ids.size
-            _unlockedCountries.value = repository.loadUnlockedCountryCodes()
-            _unlockedCountryKm.value = repository.loadUnlockedCountryKmByCode()
+            _userRefreshing.value = true
+            try {
+                val ids = repository.loadUnlockedH3Ids()
+                _hexCount.value = ids.size
+                _unlockedCountries.value = repository.loadUnlockedCountryCodes()
+                _unlockedCountryKm.value = repository.loadUnlockedCountryKmByCode()
+            } finally {
+                _userRefreshing.value = false
+            }
         }
     }
 }

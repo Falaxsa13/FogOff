@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.foggoff.data.LeaderboardEntry
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 private val GlassShape = RoundedCornerShape(24.dp)
 private val RowShape = RoundedCornerShape(20.dp)
@@ -46,21 +48,26 @@ fun FriendsScreen(
     viewModel: FriendsViewModel = viewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val userRefreshing by viewModel.userRefreshing.collectAsStateWithLifecycle()
+    val swipeState = rememberSwipeRefreshState(userRefreshing)
 
-    when {
-        uiState.loading -> {
+    SwipeRefresh(
+        state = swipeState,
+        onRefresh = { viewModel.refresh() },
+        modifier = modifier.fillMaxSize(),
+    ) {
+        val showInitialSpinner = uiState.loading && uiState.top20.isEmpty()
+        if (showInitialSpinner) {
             Row(
-                modifier = modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularProgressIndicator()
             }
-        }
-
-        else -> {
+        } else {
             LazyColumn(
-                modifier = modifier
+                modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),

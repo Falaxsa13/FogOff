@@ -22,14 +22,18 @@ class FriendsViewModel(application: Application) : AndroidViewModel(application)
 
     private val repository = LeaderboardRepository()
 
+    private val _userRefreshing = MutableStateFlow(false)
+    val userRefreshing: StateFlow<Boolean> = _userRefreshing.asStateFlow()
+
     private val _uiState = MutableStateFlow(FriendsUiState())
     val uiState: StateFlow<FriendsUiState> = _uiState.asStateFlow()
 
     init {
-        refresh()
+        // Initial load: don't show swipe-to-refresh indicator.
+        load()
     }
 
-    fun refresh() {
+    private fun load() {
         _uiState.value = _uiState.value.copy(loading = true, errorMessage = null)
         viewModelScope.launch {
             val result = repository.loadGlobalLeaderboardTop20WithCurrentRank()
@@ -40,6 +44,14 @@ class FriendsViewModel(application: Application) : AndroidViewModel(application)
                 currentUserEntry = result.currentUserEntry,
                 errorMessage = if (result.top20.isEmpty()) "No leaderboard data yet." else null,
             )
+        }
+    }
+
+    fun refresh() {
+        _userRefreshing.value = true
+        viewModelScope.launch {
+            load()
+            _userRefreshing.value = false
         }
     }
 }
