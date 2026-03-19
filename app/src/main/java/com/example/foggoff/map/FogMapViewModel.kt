@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.foggoff.data.UnlockedHexRepository
+import com.example.foggoff.location.CountryResolver
 import com.example.foggoff.h3.latLngToH3Index
 import com.example.foggoff.location.LocationTracker
 import com.mapbox.geojson.Point
@@ -21,6 +22,7 @@ class FogMapViewModel(application: Application) : AndroidViewModel(application) 
 
     private val locationTracker = LocationTracker(application)
     private val hexRepository = UnlockedHexRepository()
+    private val countryResolver = CountryResolver(application)
 
     private val _unlockedH3Ids = MutableStateFlow(setOf<String>())
     val unlockedH3Ids: StateFlow<Set<String>> = _unlockedH3Ids.asStateFlow()
@@ -48,7 +50,18 @@ class FogMapViewModel(application: Application) : AndroidViewModel(application) 
                         current + index
                     }
                 }
-                if (added) viewModelScope.launch { hexRepository.addUnlockedH3Ids(setOf(index)) }
+                if (added) {
+                    val lat = point.latitude()
+                    val lng = point.longitude()
+                    val h3 = index
+                    viewModelScope.launch {
+                        val country = countryResolver.resolveCountry(lat, lng)
+                        hexRepository.addUnlockedH3Ids(
+                            ids = setOf(h3),
+                            unlockedCountryCodes = if (country != null) setOf(country) else emptySet(),
+                        )
+                    }
+                }
             }
         }
     }

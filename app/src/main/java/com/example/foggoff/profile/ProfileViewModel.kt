@@ -16,10 +16,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _hexCount = MutableStateFlow(0)
     val hexCount: StateFlow<Int> = _hexCount.asStateFlow()
 
+    private val _unlockedCountries = MutableStateFlow<List<String>>(emptyList())
+    val unlockedCountries: StateFlow<List<String>> = _unlockedCountries.asStateFlow()
+
     init {
         viewModelScope.launch {
             val ids = repository.loadUnlockedH3Ids()
             _hexCount.value = ids.size
+            _unlockedCountries.value = repository.loadUnlockedCountryCodes()
         }
     }
 
@@ -27,6 +31,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             val ids = repository.loadUnlockedH3Ids()
             _hexCount.value = ids.size
+            _unlockedCountries.value = repository.loadUnlockedCountryCodes()
         }
     }
 }

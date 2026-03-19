@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Edit
@@ -31,11 +32,13 @@ import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,17 +70,32 @@ fun ProfileScreen(
     authViewModel: AuthViewModel = viewModel(),
 ) {
     val hexCount by viewModel.hexCount.collectAsStateWithLifecycle()
+    val countries by viewModel.unlockedCountries.collectAsStateWithLifecycle()
     val user by authViewModel.currentUser.collectAsStateWithLifecycle()
     var showSettings by remember { mutableStateOf(false) }
+    var showCountries by remember { mutableStateOf(false) }
 
     val displayName = user?.displayName?.takeIf { it.isNotBlank() } ?: "Explorer"
     val avatarLetter = displayName.first().uppercaseChar().toString()
     val email = user?.email.orEmpty()
 
+    LaunchedEffect(showCountries) {
+        if (showCountries) viewModel.refresh()
+    }
+
     if (showSettings) {
         SettingsScreen(
             authViewModel = authViewModel,
             onBack = { showSettings = false },
+            modifier = modifier,
+        )
+        return
+    }
+
+    if (showCountries) {
+        CountriesScreen(
+            countries = countries,
+            onBack = { showCountries = false },
             modifier = modifier,
         )
         return
@@ -261,6 +279,13 @@ fun ProfileScreen(
                     )
                     CardDivider()
                     MenuRow(
+                        icon = Icons.Outlined.Language,
+                        label = "Countries",
+                        sublabel = "Visited map areas",
+                        onClick = { showCountries = true },
+                    )
+                    CardDivider()
+                    MenuRow(
                         icon = Icons.Outlined.Info,
                         label = "About Fog Off",
                         sublabel = "Version 1.0 · Open source",
@@ -413,6 +438,86 @@ private fun MenuRow(
                 tint = MaterialTheme.colorScheme.outlineVariant,
                 modifier = Modifier.size(18.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun CountriesScreen(
+    countries: List<String>,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 18.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                )
+            }
+            Text(
+                text = "Countries",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            // Keep layout balanced with an invisible icon slot.
+            Box(modifier = Modifier.size(48.dp))
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Visited",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                if (countries.isEmpty()) {
+                    Text(
+                        text = "Unlock a few hexes to start collecting countries.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text(
+                        text = "${countries.distinct().size} countries unlocked",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    countries.distinct().sorted().forEach { country ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.White.copy(alpha = 0.65f))
+                                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                        ) {
+                            Text(
+                                text = country,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
