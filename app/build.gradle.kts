@@ -88,4 +88,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     // (country flags handled via unicode emoji in UI; no external library)
+
+    // Pull-to-refresh (swipe down) for Profile/Leaderboard
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.34.0")
 }
