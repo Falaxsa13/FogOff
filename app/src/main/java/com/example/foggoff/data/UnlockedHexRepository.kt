@@ -7,6 +7,7 @@ import kotlinx.coroutines.tasks.await
 
 private const val COLLECTION_USERS = "users"
 private const val FIELD_UNLOCKED_H3_IDS = "unlockedH3Ids"
+private const val FIELD_DISPLAY_NAME = "displayName"
 
 /**
  * Persists and loads unlocked H3 hex IDs in Firestore.
@@ -35,10 +36,26 @@ class UnlockedHexRepository(
             val ref = firestore.collection(COLLECTION_USERS).document(uid)
             val snapshot = ref.get().await()
             val list = ids.toList()
+            val displayName = auth.currentUser?.displayName?.trim().orEmpty()
             if (!snapshot.exists()) {
-                ref.set(mapOf(FIELD_UNLOCKED_H3_IDS to list)).await()
+                val payload = mutableMapOf<String, Any>(
+                    FIELD_UNLOCKED_H3_IDS to list
+                )
+                if (displayName.isNotBlank()) {
+                    payload[FIELD_DISPLAY_NAME] = displayName
+                }
+                ref.set(payload).await()
             } else {
-                ref.update(FIELD_UNLOCKED_H3_IDS, FieldValue.arrayUnion(*list.toTypedArray())).await()
+                if (displayName.isNotBlank()) {
+                    ref.update(
+                        FIELD_UNLOCKED_H3_IDS,
+                        FieldValue.arrayUnion(*list.toTypedArray()),
+                        FIELD_DISPLAY_NAME,
+                        displayName,
+                    ).await()
+                } else {
+                    ref.update(FIELD_UNLOCKED_H3_IDS, FieldValue.arrayUnion(*list.toTypedArray())).await()
+                }
             }
         } catch (e: Exception) {
             // Firestore or auth failed; fail silently

@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,13 +27,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.foggoff.R
-import com.example.foggoff.feed.FeedScreen
+import com.example.foggoff.friends.FriendsScreen
 import com.example.foggoff.map.FogMapScreen
 import com.example.foggoff.profile.ProfileScreen
 
 private val Tabs = listOf(
     "Explore" to Icons.Default.Explore,
-    "Feed" to Icons.AutoMirrored.Filled.List,
+    "Friends" to Icons.Default.People,
     "Profile" to Icons.Default.Person,
 )
 
@@ -74,7 +74,7 @@ fun MainScreen(
             ) {
                 when (selectedIndex) {
                     0 -> FogMapScreen(modifier = Modifier.fillMaxSize())
-                    1 -> FeedScreen(modifier = Modifier.fillMaxSize())
+                    1 -> FriendsScreen(modifier = Modifier.fillMaxSize())
                     else -> ProfileScreen(onSignOut = onSignOut, modifier = Modifier.fillMaxSize())
                 }
             }

@@ -9,6 +9,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,6 +19,7 @@ import kotlinx.coroutines.tasks.await
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
 
     private val _currentUser = MutableStateFlow(auth.currentUser)
     val currentUser: StateFlow<com.google.firebase.auth.FirebaseUser?> = _currentUser.asStateFlow()
@@ -73,6 +76,9 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         return try {
             val updates = UserProfileChangeRequest.Builder().setDisplayName(trimmed).build()
             user.updateProfile(updates).await()
+            firestore.collection("users").document(user.uid)
+                .set(mapOf("displayName" to trimmed), SetOptions.merge())
+                .await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
