@@ -19,11 +19,15 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _unlockedCountries = MutableStateFlow<List<String>>(emptyList())
     val unlockedCountries: StateFlow<List<String>> = _unlockedCountries.asStateFlow()
 
+    private val _unlockedCountryKm = MutableStateFlow<Map<String, Double>>(emptyMap())
+    val unlockedCountryKm: StateFlow<Map<String, Double>> = _unlockedCountryKm.asStateFlow()
+
     init {
         viewModelScope.launch {
             val ids = repository.loadUnlockedH3Ids()
             _hexCount.value = ids.size
             _unlockedCountries.value = repository.loadUnlockedCountryCodes()
+            _unlockedCountryKm.value = repository.loadUnlockedCountryKmByCode()
         }
     }
 
@@ -32,6 +36,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             val ids = repository.loadUnlockedH3Ids()
             _hexCount.value = ids.size
             _unlockedCountries.value = repository.loadUnlockedCountryCodes()
+            _unlockedCountryKm.value = repository.loadUnlockedCountryKmByCode()
         }
     }
 }

@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.foggoff.auth.AuthViewModel
+import java.util.Locale
 
 private val CardShape = RoundedCornerShape(24.dp)
 private val GlassBg = Color.White
@@ -71,6 +72,7 @@ fun ProfileScreen(
 ) {
     val hexCount by viewModel.hexCount.collectAsStateWithLifecycle()
     val countries by viewModel.unlockedCountries.collectAsStateWithLifecycle()
+    val countryKmByCode by viewModel.unlockedCountryKm.collectAsStateWithLifecycle()
     val user by authViewModel.currentUser.collectAsStateWithLifecycle()
     var showSettings by remember { mutableStateOf(false) }
     var showCountries by remember { mutableStateOf(false) }
@@ -95,6 +97,7 @@ fun ProfileScreen(
     if (showCountries) {
         CountriesScreen(
             countries = countries,
+            countryKmByCode = countryKmByCode,
             onBack = { showCountries = false },
             modifier = modifier,
         )
@@ -445,6 +448,7 @@ private fun MenuRow(
 @Composable
 private fun CountriesScreen(
     countries: List<String>,
+    countryKmByCode: Map<String, Double>,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -498,7 +502,13 @@ private fun CountriesScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    countries.distinct().sorted().forEach { country ->
+                    countries.distinct().sorted().forEach { countryRaw ->
+                        val iso2 = inferIso2(countryRaw)
+                        val km = iso2?.let { countryKmByCode[it] } ?: 0.0
+                        val displayName = iso2?.let { code ->
+                            Locale("", code).displayCountry.takeIf { it.isNotBlank() } ?: countryRaw
+                        } ?: countryRaw
+
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -508,12 +518,32 @@ private fun CountriesScreen(
                                 .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                         ) {
-                            Text(
-                                text = country,
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = displayName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "${formatKm(km)}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                    if (iso2 != null) {
+                                        CountryFlag(iso2 = iso2)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -521,3 +551,56 @@ private fun CountriesScreen(
         }
     }
 }
+
+@Composable
+private fun CountryFlag(iso2: String) {
+    val emoji = iso2ToEmojiFlag(iso2)
+    if (emoji != null) {
+        Text(
+            text = emoji,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+private fun iso2ToEmojiFlag(iso2Raw: String): String? {
+    val iso2 = iso2Raw.trim().uppercase(Locale.ROOT)
+    if (iso2.length != 2) return null
+    val c1 = iso2[0]
+    val c2 = iso2[1]
+    if (c1 !in 'A'..'Z' || c2 !in 'A'..'Z') return null
+
+    fun regionalIndicator(letter: Char): Int = 0x1F1E6 + (letter.code - 'A'.code)
+    val first = regionalIndicator(c1)
+    val second = regionalIndicator(c2)
+    return String(Character.toChars(first)) + String(Character.toChars(second))
+}
+
+private fun inferIso2(countryRaw: String): String? {
+    val trimmed = countryRaw.trim()
+    if (trimmed.length == 2 && trimmed.all { it in 'A'..'Z' || it in 'a'..'z' }) {
+        return trimmed.uppercase(Locale.ROOT)
+    }
+
+    // If we stored a country name (not a code), infer ISO alpha-2 by matching to Locale displayCountry.
+    val normalizedTarget = trimmed.replace(" ", "").uppercase(Locale.ROOT)
+
+    for (code in Locale.getISOCountries()) {
+        val localeName = Locale("", code).displayCountry ?: continue
+        val normalizedCandidate = localeName.replace(" ", "").uppercase(Locale.ROOT)
+        if (normalizedCandidate == normalizedTarget) return code
+
+        // Fallback: allow direct case-insensitive match.
+        if (localeName.equals(trimmed, ignoreCase = true)) return code
+    }
+    return null
+}
+
+private fun formatKm(km: Double): String {
+    // Compact formatting: 12.3 -> "12.3", 12.0 -> "12"
+    val formatted = String.format(Locale.US, "%.1f", km)
+    return formatted.removeSuffix(".0")
+}
+
+// NOTE: no external flag library. Flags are rendered via unicode regional-indicator emojis.

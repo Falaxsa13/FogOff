@@ -24,6 +24,8 @@ class FogMapViewModel(application: Application) : AndroidViewModel(application) 
     private val hexRepository = UnlockedHexRepository()
     private val countryResolver = CountryResolver(application)
 
+    private var lastUnlockPoint: Point? = null
+
     private val _unlockedH3Ids = MutableStateFlow(setOf<String>())
     val unlockedH3Ids: StateFlow<Set<String>> = _unlockedH3Ids.asStateFlow()
 
@@ -56,14 +58,38 @@ class FogMapViewModel(application: Application) : AndroidViewModel(application) 
                     val h3 = index
                     viewModelScope.launch {
                         val country = countryResolver.resolveCountry(lat, lng)
+                        val distanceKm = lastUnlockPoint?.let { last ->
+                            haversineKm(
+                                lat1 = last.latitude(),
+                                lon1 = last.longitude(),
+                                lat2 = lat,
+                                lon2 = lng,
+                            )
+                        } ?: 0.0
                         hexRepository.addUnlockedH3Ids(
                             ids = setOf(h3),
                             unlockedCountryCodes = if (country != null) setOf(country) else emptySet(),
+                            unlockedCountryKmAdds = if (country != null && distanceKm > 0.0) {
+                                mapOf(country to distanceKm)
+                            } else emptyMap(),
                         )
                     }
+                    lastUnlockPoint = point
                 }
             }
         }
+    }
+
+    private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371.0 // Earth radius in km
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val sinLat = Math.sin(dLat / 2)
+        val sinLon = Math.sin(dLon / 2)
+        val a = (sinLat * sinLat) +
+            (Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) * (sinLon * sinLon))
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return r * c
     }
 
     /** Start tracking the device's real GPS location. */

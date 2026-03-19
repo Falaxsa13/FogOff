@@ -33,13 +33,28 @@ class CountryResolver(context: Context) {
                 val address = results?.firstOrNull() ?: return@withContext null
                 val code = address.countryCode?.takeIf { it.isNotBlank() }?.uppercase(Locale.ROOT)
                 val name = address.countryName?.takeIf { it.isNotBlank() }
-                val resolved = code ?: name ?: return@withContext null
+                val resolved = code ?: name?.let { inferIso2FromCountryName(it) } ?: return@withContext null
                 cache[cacheKey] = resolved
                 resolved
             } catch (_: Exception) {
                 null
             }
         }
+    }
+
+    private fun inferIso2FromCountryName(countryNameRaw: String): String? {
+        val trimmed = countryNameRaw.trim()
+        if (trimmed.isBlank()) return null
+
+        val normalizedTarget = trimmed.replace(" ", "").uppercase(Locale.ROOT)
+
+        for (code in Locale.getISOCountries()) {
+            val localeName = Locale("", code).displayCountry ?: continue
+            val normalizedCandidate = localeName.replace(" ", "").uppercase(Locale.ROOT)
+            if (normalizedCandidate == normalizedTarget) return code
+            if (localeName.equals(trimmed, ignoreCase = true)) return code
+        }
+        return null
     }
 }
 

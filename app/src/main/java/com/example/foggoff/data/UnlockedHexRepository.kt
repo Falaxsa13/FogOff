@@ -3,12 +3,14 @@ package com.example.foggoff.data
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import java.util.Locale
 import kotlinx.coroutines.tasks.await
 
 private const val COLLECTION_USERS = "users"
 private const val FIELD_UNLOCKED_H3_IDS = "unlockedH3Ids"
 private const val FIELD_UNLOCKED_HEX_COUNT = "unlockedHexCount"
 private const val FIELD_UNLOCKED_COUNTRIES = "unlockedCountries"
+private const val FIELD_UNLOCKED_COUNTRY_KM = "unlockedCountryKm"
 private const val FIELD_DISPLAY_NAME = "displayName"
 
 /**
@@ -48,6 +50,22 @@ class UnlockedHexRepository(
         ids: Set<String>,
         unlockedCountryCodes: Set<String>,
     ) {
+        addUnlockedH3Ids(
+            ids = ids,
+            unlockedCountryCodes = unlockedCountryCodes,
+            unlockedCountryKmAdds = emptyMap(),
+        )
+    }
+
+    /**
+     * @param unlockedCountryCodes country codes/names to union into `unlockedCountries`
+     * @param unlockedCountryKmAdds per-country km increments to add into `unlockedCountryKm` map
+     */
+    suspend fun addUnlockedH3Ids(
+        ids: Set<String>,
+        unlockedCountryCodes: Set<String>,
+        unlockedCountryKmAdds: Map<String, Double>,
+    ) {
         if (ids.isEmpty() && unlockedCountryCodes.isEmpty()) return
         try {
             val uid = ensureSignedIn() ?: return
@@ -64,6 +82,14 @@ class UnlockedHexRepository(
                 ?.toSet()
                 .orEmpty()
             val newTotalCount = (existingIds + ids).size
+
+            val kmPayload = unlockedCountryKmAdds
+                .mapNotNull { (rawCode, rawKm) ->
+                    val code = rawCode.trim().uppercase(Locale.ROOT)
+                    val km = rawKm
+                    if (code.isNotBlank() && km > 0.0) code to km else null
+                }
+                .toMap()
             if (!snapshot.exists()) {
                 val payload = mutableMapOf<String, Any>(
                     FIELD_UNLOCKED_H3_IDS to list,
@@ -71,6 +97,9 @@ class UnlockedHexRepository(
                 )
                 if (countries.isNotEmpty()) {
                     payload[FIELD_UNLOCKED_COUNTRIES] = countries
+                }
+                if (kmPayload.isNotEmpty()) {
+                    payload[FIELD_UNLOCKED_COUNTRY_KM] = kmPayload
                 }
                 if (displayName.isNotBlank()) {
                     payload[FIELD_DISPLAY_NAME] = displayName
@@ -84,6 +113,11 @@ class UnlockedHexRepository(
                 if (countries.isNotEmpty()) {
                     updatePayload[FIELD_UNLOCKED_COUNTRIES] =
                         FieldValue.arrayUnion(*countries.toTypedArray())
+                }
+                for ((code, km) in kmPayload) {
+                    // Dot-notation updates a nested map key:
+                    // users/{uid}.unlockedCountryKm.US += km
+                    updatePayload["$FIELD_UNLOCKED_COUNTRY_KM.$code"] = FieldValue.increment(km)
                 }
                 if (displayName.isNotBlank()) {
                     updatePayload[FIELD_DISPLAY_NAME] = displayName
@@ -103,6 +137,26 @@ class UnlockedHexRepository(
             list.filterIsInstance<String>().map { it.trim() }.filter { it.isNotBlank() }
         } catch (_: Exception) {
             emptyList()
+        }
+    }
+
+    suspend fun loadUnlockedCountryKmByCode(): Map<String, Double> {
+        return try {
+            val uid = ensureSignedIn() ?: return emptyMap()
+            val doc = firestore.collection(COLLECTION_USERS).document(uid).get().await()
+            val rawMap = doc.get(FIELD_UNLOCKED_COUNTRY_KM) as? Map<*, *> ?: return emptyMap()
+
+            rawMap.mapNotNull { (k, v) ->
+                val code = (k as? String)?.trim()?.uppercase(Locale.ROOT) ?: return@mapNotNull null
+                val km = when (v) {
+                    is Number -> v.toDouble()
+                    is String -> v.toDoubleOrNull()
+                    else -> null
+                } ?: return@mapNotNull null
+                code to km
+            }.toMap()
+        } catch (_: Exception) {
+            emptyMap()
         }
     }
 
